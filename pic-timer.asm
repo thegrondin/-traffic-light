@@ -43,8 +43,6 @@ ZONE1_UDATA	udata 0x60 	; La directive "udata" (unsigned data) permet de définir
 Count	 	res 1 		; La directive "res" réserve un seul octet qui pourra être référencé à l'aide du mot "Count".
 				; L'octet sera localisé à l'adresse 0x60 (dans la banque 0).
 
-
-PortNumber	res 1		 ; 0 -> GREEN, 1 -> YELLO, 2 -> RED
 Output		res 1
 Delay_pointer	res 1
 		
@@ -54,8 +52,6 @@ GREEN_DELAY	res 1
 YELLOW_DELAY	res 1	
 RED_DELAY	res 1				
 
-
-	
 ;************************************************************
 ; reset vector
  
@@ -95,40 +91,28 @@ Zone3	code 00020h		; Ici, la nouvelle directive "code" définit une nouvelle adre
 				; Cette nouvelle zone de code est nommée "Zone3".
 
 Start				; Cette étiquette précède l'instruction "bcf". Elle sert d'adresse destination à l'instruction "goto" apparaissant plus haut.
-	bcf TRISC,0		; définit le bit 1 du port C en sortie
-	bcf TRISC,1		; définit le bit 2 du port C en sortie
-	bcf TRISC,2
+	
 	clrf TRISC
 	clrf TRISD		; définit tous les bits du port D en sorties
 	setf TRISB		; définit tous les bits du port B en entrées 
 	
-	movlw d'1'
+	movlw d'10'
 	movwf GREEN_DELAY
 	
-	movlw d'5'
+	movlw d'3'
 	movwf YELLOW_DELAY
 	
-	movlw d'10'
+	movlw d'15'
 	movwf RED_DELAY
-	
-	clrf  PortNumber
-	
-	movlw b'00000001'
 	
 	movlw 0x71
 	movwf Delay_pointer
-	
-	
+
 	movlw 0x01
 	movwf PORTC
 	
 	movlw 0x02
 	movwf Output
-	
-	
-
-	;movlw 0x04		; charge la valeur 0x3f dans le registre WREG
-	;movwf Count		; copie le contenu du registre WREG dans l'espace-mémoire associé à "Count" 
 
 	movff	GREEN_DELAY, Count
 	
@@ -201,12 +185,7 @@ TO_ISR				; Cette étiquette précède l'instruction "movlw". Elle sert d'adresse d
 	call ResetCycle
 	
 	rlcf Output
-	
-	
-	
-	
-	
-	
+
 saut
 	return			; Provoque le retour à l'instruction suivant l'appel de la sous-routine 
 				; qui a débuté à l'adresse "TO_ISR"
