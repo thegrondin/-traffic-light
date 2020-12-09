@@ -1,6 +1,6 @@
 ;
-; Daniel Audet
-; Juillet 2010
+; Thomas Dion-Grondin
+; Décembre 2020
 ;
 ;****************************************************************************
 ; MCU TYPE
@@ -92,29 +92,29 @@ Zone3	code	00020h		; Ici, la nouvelle directive "code" définit une nouvelle adre
 
 Start				; Cette étiquette précède l'instruction "bcf". Elle sert d'adresse destination à l'instruction "goto" apparaissant plus haut.
 	
-	clrf	TRISC
+	clrf	TRISC		; 
 	clrf	TRISD		; définit tous les bits du port D en sorties
 	setf	TRISB		; définit tous les bits du port B en entrées 
 	
 	movlw	d'10'
-	movwf	GREEN_DELAY
+	movwf	GREEN_DELAY	; Transfère le contenu de WREG dans l'espace mémoire GREEN_DELAY. Dans ce cas, 10 représentant des secondes
 	
 	movlw	d'3'
-	movwf	YELLOW_DELAY
+	movwf	YELLOW_DELAY	; Transfère le contenu de WREG dans l'espace mémoire GREEN_DELAY. Dans ce cas, 10 représentant des secondes
 	
 	movlw	d'15'
-	movwf	RED_DELAY
+	movwf	RED_DELAY	; Transfère le contenu de WREG dans l'espace mémoire GREEN_DELAY. Dans ce cas, 10 représentant des secondes
 	
 	movlw	0x71
-	movwf	Delay_pointer
+	movwf	Delay_pointer	; Espace mémoire pointant vers le prochain délais a effectuer pour le controle du feu de circulation
 
-	movlw	0x01
-	movwf	PORTC
+	movlw	0x01		 
+	movwf	PORTC		; Copier le contenu de WREG (dans ce cas 1) dans PORTC. Dans ce cas, le bit 0 de PORTC sera actif.
 	
 	movlw	0x02
-	movwf	Output
+	movwf	Output		; Copier le contenu de WREG (b(10)) dans l'espace mémoire Output. Permettra de signifier le prochain bit a activer dans PORTC
 
-	movff	GREEN_DELAY, Count
+	movff	GREEN_DELAY, Count ; Copier le contenu de GREEN_DELAY dans Count. permet de définir le délais actuel en seconde dans l'espace mémoire Count.
 	
 	movlw	0x07		; Charge la valeur 0x07 dans le registre WREG
 	movwf	T0CON		; Copie le contenu du registre WREG dans l'espace-mémoire associé à T0CON
@@ -123,7 +123,7 @@ Start				; Cette étiquette précède l'instruction "bcf". Elle sert d'adresse dest
 				; qu'il utilise un facteur d'échelle ainsi que l'horloge interne
 				; => voir la page 149 de la documentation sur le micro-contrôleur http://ww1.microchip.com/downloads/en/DeviceDoc/39625c.pdf
 
-	movlw	0xf1		; Charge la valeur 0xff dans le registre WREG
+	movlw	0xf6		; Charge la valeur 0xff dans le registre WREG
 	movwf	TMR0H		; Copie le contenu du registre WREG dans l'espace-mémoire associé à TMR0H
 	movlw	0xfF		; Charge la valeur 0xf2 dans le registre WREG
 	movwf	TMR0L		; Copie le contenu du registre WREG dans l'espace-mémoire associé à TMR0L
@@ -158,7 +158,7 @@ TO_ISR				; Cette étiquette précède l'instruction "movlw". Elle sert d'adresse d
 				; Les instructions qui suivent forment la sous-routine de gestion des interruptions.
 				
 				; Tout d'abord, on commence par réinitialiser la valeur initiale du temporisateur
-	movlw	0xf1		; Charge la valeur 0xff dans le registre WREG
+	movlw	0xf6		; Charge la valeur 0xff dans le registre WREG
 	movwf	TMR0H		; Copie le contenu du registre WREG dans l'espace-mémoire associé à TMR0H
 	movlw	0xff		; Charge la valeur 0xf2 dans le registre WREG
 	movwf	TMR0L		; Copie le contenu du registre WREG dans l'espace-mémoire associé à TMR0L
@@ -172,18 +172,19 @@ TO_ISR				; Cette étiquette précède l'instruction "movlw". Elle sert d'adresse d
 	bnz	saut		; saute à l'adresse associée à "saut" si le bit Z du registre de statut est à 0
 				; Il y a donc un branchement si la valeur "Count" n'est pas nulle ("non zero").
 	
-	movff	Output, PORTC
+	movff	Output, PORTC	; Copier le contenu de l'espace mémoire de Output dans PORTC. Permet de signifer quels pins de PORTC seront actifs
 
-	movff	Delay_pointer, 	FSR0L
-	movff	INDF0, Count
-	incf	Delay_pointer
+	movff	Delay_pointer, 	FSR0L ; Permet d'accéder au délais a partir d'un pointeur pointant 
+	movff	INDF0, Count	      ; vers une adresse mémoire entre GREEN_DELAY, YELLOW_DELAY et RED_DELAY a l'aide de L'adressage indirect.	Stocker le résulat dans Count
+	incf	Delay_pointer	      ; Incrémenter le pointeur pour permettre d'accéder au prochain délais de la prochain couleur.
 	
-	movlw	b'100'
+	movlw	b'100'		      
 	bcf	STATUS,C
-	cpfslt	Output
-	call	ResetCycle
+	cpfslt	Output		       ; Si la sortie est inférieur a b(100), passer la prochaine instruction
+	call	ResetCycle	       ; Sinon, executer ResetCycle. Si la sortie est supérieur a b(100), ceci signifit que le programme a fait un cycle complet. Nous devons le recommencer
 	
-	rlcf	Output
+	rlcf	Output		       ; Permet de faire une rotation de bits l'espace mémoire Output vers la gauche. 
+				       ; Permet de signifier la nouvelle pin a activer pour le prochain cycle.
 
 saut
 	return			; Provoque le retour à l'instruction suivant l'appel de la sous-routine 
@@ -191,11 +192,11 @@ saut
 
 ResetCycle
 	
-	clrf	Output
-	bsf	STATUS,C
+	clrf	Output		 ; Clear l'espace mémoire Output
+	bsf	STATUS,C	 ; Fixer a 1 le bit C de STATUS pour permettre d'avoir un bit a la position la moins significative lors de la rotation
 	
-	movlw	0x70
-	movwf	Delay_pointer
+	movlw	0x70		 
+	movwf	Delay_pointer	 ; Faire égaler a 0x70 le pointeur des délais. Le commencement de cet espace mémoire
 	
 	return
 	END
